@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { orderApi } from '@/services/order.service';
 import { extractErrorMessage } from '@/utils/errors';
 import { orderKeys } from './useOrders';
-import type { OrderStatus } from '@/types/order.types';
+import type { OrderStatus, UpdateOrderShippingPayload } from '@/types/order.types';
 
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
@@ -13,6 +13,19 @@ export function useUpdateOrderStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: orderKeys.admin });
       toast.success('Order status updated');
+    },
+    onError: (error) => toast.error(extractErrorMessage(error)),
+  });
+}
+
+export function useUpdateOrderShipping() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateOrderShippingPayload }) =>
+      orderApi.adminUpdateShipping(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orderKeys.admin });
+      toast.success('Shipping details updated');
     },
     onError: (error) => toast.error(extractErrorMessage(error)),
   });

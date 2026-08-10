@@ -12,10 +12,10 @@ import { OrderItemsList } from '@/components/features/orders/OrderItemsList';
 import { OrderTotals } from '@/components/features/orders/OrderTotals';
 import { useMyOrderDetails } from '@/hooks/useOrders';
 import { useCancelOrder } from '@/hooks/useOrderMutations';
-import { PAYMENT_METHOD_LABELS } from '@/constants';
+import { PAYMENT_METHOD_LABELS, SHIPPING_METHOD_LABELS } from '@/constants';
 import type { OrderStatus } from '@/types/order.types';
 
-const CANCELLABLE_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'packed', 'shipped'];
+const CANCELLABLE_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'packed', 'shipped', 'out_for_delivery'];
 
 export default function OrderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -110,7 +110,25 @@ export default function OrderDetails() {
           </div>
 
           <div className="rounded-xl border border-surface-border bg-white p-4">
-            <OrderTotals subtotal={order.subtotal} shippingFee={order.shippingFee} total={order.total} />
+            <h2 className="text-sm font-semibold text-text-primary">Shipping</h2>
+            <p className="mt-2 text-sm text-text-secondary">{SHIPPING_METHOD_LABELS[order.shipping.method]}</p>
+            {(order.shipping.trackingNumber || order.shipping.courier) && (
+              <p className="mt-1 text-sm text-text-secondary">
+                {order.shipping.courier ? `${order.shipping.courier} · ` : ''}
+                {order.shipping.trackingNumber ? `Tracking: ${order.shipping.trackingNumber}` : ''}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-surface-border bg-white p-4">
+            <OrderTotals
+              subtotal={order.subtotal}
+              discount={order.discount}
+              shippingFee={order.shippingFee}
+              tax={order.tax}
+              total={order.total}
+              couponCode={order.coupon?.code}
+            />
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import type {
   OrderHistoryQueryParams,
   AdminOrderQueryParams,
   OrderStatus,
+  UpdateOrderShippingPayload,
 } from '@/types/order.types';
 
 interface OrderListResult {
@@ -51,6 +52,14 @@ export const orderApi = {
     const { data } = await api.patch<ApiSuccessResponse<{ order: Order }>>(
       `/orders/admin/${id}/status`,
       { status, note }
+    );
+    return data.data.order;
+  },
+
+  async adminUpdateShipping(id: string, payload: UpdateOrderShippingPayload): Promise<Order> {
+    const { data } = await api.patch<ApiSuccessResponse<{ order: Order }>>(
+      `/orders/admin/${id}/shipping`,
+      payload
     );
     return data.data.order;
   },

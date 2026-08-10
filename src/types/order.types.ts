@@ -1,7 +1,15 @@
-export type OrderStatus = 'pending' | 'confirmed' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'packed'
+  | 'shipped'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'cancelled';
 // 'stripe' | 'razorpay' are reserved for when those providers go live on the backend.
 export type PaymentMethod = 'cod' | 'stripe' | 'razorpay';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type ShippingMethod = 'standard' | 'express';
 
 export interface OrderItem {
   product: string;
@@ -37,6 +45,19 @@ export interface OrderPayment {
   providerReference?: string;
 }
 
+export interface OrderCoupon {
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  value: number;
+  discountAmount: number;
+}
+
+export interface OrderShipping {
+  method: ShippingMethod;
+  trackingNumber?: string;
+  courier?: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -46,9 +67,13 @@ export interface Order {
   status: OrderStatus;
   statusHistory: OrderStatusEvent[];
   payment: OrderPayment;
+  shipping: OrderShipping;
   subtotal: number;
+  discount: number;
+  tax: number;
   shippingFee: number;
   total: number;
+  coupon?: OrderCoupon;
   cancelledAt?: string;
   cancelReason?: string;
   createdAt: string;
@@ -58,6 +83,13 @@ export interface Order {
 export interface CheckoutPayload {
   addressId: string;
   paymentMethod?: PaymentMethod;
+  couponCode?: string;
+  shippingMethod?: ShippingMethod;
+}
+
+export interface UpdateOrderShippingPayload {
+  trackingNumber?: string;
+  courier?: string;
 }
 
 export interface OrderHistoryQueryParams {

@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Users,
   Boxes,
+  Tag,
   Settings,
   LucideIcon,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const items: SidebarItem[] = [
   { label: 'Dashboard', to: '/admin', icon: LayoutDashboard },
   { label: 'Products', to: '/admin/products', icon: Package },
   { label: 'Categories', to: '/admin/categories', icon: FolderTree },
+  { label: 'Coupons', to: '/admin/coupons', icon: Tag },
   { label: 'Orders', to: '/admin/orders', icon: ShoppingCart },
   { label: 'Customers', icon: Users },
   { label: 'Inventory', to: '/admin/inventory', icon: Boxes },

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Truck, Wallet } from 'lucide-react';
+import { CreditCard, Tag, Truck, Wallet, X, Zap } from 'lucide-react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { AddressCard } from '@/components/features/addresses/AddressCard';
 import { AddressForm } from '@/components/features/addresses/AddressForm';
 import { OrderTotals } from '@/components/features/orders/OrderTotals';
@@ -13,8 +14,15 @@ import { useCart } from '@/hooks/useCart';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useCreateAddress } from '@/hooks/useAddressMutations';
 import { useCheckout } from '@/hooks/useOrderMutations';
+import { useValidateCoupon } from '@/hooks/useValidateCoupon';
+import { useShippingMethods } from '@/hooks/useShippingMethods';
 import { formatCurrency } from '@/utils/format';
+import { cn } from '@/utils/cn';
 import type { AddressFormSchemaValues } from '@/utils/addressValidation';
+import type { ValidateCouponResult } from '@/types/coupon.types';
+import type { ShippingMethod } from '@/types/order.types';
+
+const SHIPPING_METHOD_ICONS: Record<ShippingMethod, typeof Truck> = { standard: Truck, express: Zap };
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -22,9 +30,14 @@ export default function Checkout() {
   const { data: addresses, isLoading, isError, refetch } = useAddresses();
   const createAddress = useCreateAddress();
   const checkout = useCheckout();
+  const validateCoupon = useValidateCoupon();
+  const { data: shippingMethods } = useShippingMethods(summary.subtotal);
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<ValidateCouponResult | null>(null);
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('standard');
 
   useEffect(() => {
     if (!addresses || addresses.length === 0) return;
@@ -50,10 +63,25 @@ export default function Checkout() {
   const handlePlaceOrder = () => {
     if (!selectedAddressId) return;
     checkout.mutate(
-      { addressId: selectedAddressId, paymentMethod: 'cod' },
+      { addressId: selectedAddressId, paymentMethod: 'cod', couponCode: appliedCoupon?.code, shippingMethod },
       { onSuccess: (order) => navigate(`/orders/${order.id}`, { replace: true }) }
     );
   };
+
+  const handleApplyCoupon = () => {
+    if (!couponInput.trim()) return;
+    validateCoupon.mutate(couponInput.trim(), { onSuccess: (result) => setAppliedCoupon(result) });
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput('');
+  };
+
+  const selectedShippingFee =
+    shippingMethods?.methods.find((option) => option.method === shippingMethod)?.fee ?? 0;
+  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const estimatedTotal = Math.max(0, Math.round((summary.subtotal - discountAmount + selectedShippingFee) * 100) / 100);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -110,6 +138,39 @@ export default function Checkout() {
           </section>
 
           <section>
+            <h2 className="text-base font-semibold text-text-primary">Shipping method</h2>
+            <div className="mt-3 flex flex-col gap-3">
+              {(shippingMethods?.methods ?? []).map((option) => {
+                const Icon = SHIPPING_METHOD_ICONS[option.method];
+                const isSelected = shippingMethod === option.method;
+                return (
+                  <button
+                    key={option.method}
+                    type="button"
+                    onClick={() => setShippingMethod(option.method)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl border p-4 text-left transition-colors',
+                      isSelected ? 'border-brand-primary bg-brand-accent/40' : 'border-surface-border hover:bg-surface-card'
+                    )}
+                  >
+                    <Icon
+                      className={cn('h-5 w-5', isSelected ? 'text-brand-primary' : 'text-text-muted')}
+                      aria-hidden="true"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-text-primary">{option.label}</p>
+                      <p className="text-xs text-text-secondary">{option.estimatedDelivery}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-text-primary">
+                      {option.fee > 0 ? formatCurrency(option.fee) : 'Free'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
             <h2 className="text-base font-semibold text-text-primary">Payment method</h2>
             <div className="mt-3 flex flex-col gap-3">
               <div className="flex items-center gap-3 rounded-xl border border-brand-primary bg-brand-accent/40 p-4">
@@ -148,7 +209,51 @@ export default function Checkout() {
             ))}
           </div>
 
-          <OrderTotals subtotal={summary.subtotal} shippingFee={0} total={summary.subtotal} />
+          <div className="border-t border-surface-border pt-4">
+            {appliedCoupon ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-semantic-success/10 px-3 py-2 text-sm text-semantic-success">
+                <span className="flex items-center gap-1.5">
+                  <Tag className="h-4 w-4" aria-hidden="true" />
+                  {appliedCoupon.code} applied
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  aria-label="Remove coupon"
+                  className="rounded p-0.5 hover:bg-semantic-success/20"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-end gap-2">
+                <Input
+                  label="Coupon code"
+                  placeholder="e.g. SAVE10"
+                  value={couponInput}
+                  onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleApplyCoupon}
+                  isLoading={validateCoupon.isPending}
+                  disabled={!couponInput.trim()}
+                >
+                  Apply
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <OrderTotals
+            subtotal={summary.subtotal}
+            discount={appliedCoupon?.discountAmount ?? 0}
+            shippingFee={selectedShippingFee}
+            tax={0}
+            total={estimatedTotal}
+            couponCode={appliedCoupon?.code}
+          />
 
           <Button
             onClick={handlePlaceOrder}

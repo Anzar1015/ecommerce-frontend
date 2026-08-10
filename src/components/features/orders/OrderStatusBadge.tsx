@@ -7,6 +7,7 @@ const STATUS_VARIANT: Record<OrderStatus, 'default' | 'success' | 'warning' | 'e
   confirmed: 'info',
   packed: 'info',
   shipped: 'info',
+  out_for_delivery: 'info',
   delivered: 'success',
   cancelled: 'error',
 };
