@@ -1,6 +1,6 @@
 import { CURRENCY } from '@/constants';
 
-const currencyFormatter = new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: CURRENCY,
 });

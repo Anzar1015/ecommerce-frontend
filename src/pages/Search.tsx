@@ -3,13 +3,12 @@ import { ProductCatalog } from '@/components/features/products/ProductCatalog';
 
 export default function Search() {
   const [searchParams] = useSearchParams();
-  const query = searchParams.get('q') ?? '';
+  const query = searchParams.get('search') ?? '';
 
   return (
     <ProductCatalog
       title={query ? `Search results for "${query}"` : 'Search'}
       breadcrumbLabel="Search"
-      searchOverride={query || undefined}
     />
   );
 }

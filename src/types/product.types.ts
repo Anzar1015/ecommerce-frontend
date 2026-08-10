@@ -4,13 +4,15 @@ export type ProductStatus = 'draft' | 'active' | 'archived';
 export type StockStatus = 'out_of_stock' | 'low_stock' | 'in_stock';
 
 export type ProductSort =
+  | 'relevance'
   | 'newest'
   | 'oldest'
   | 'price_asc'
   | 'price_desc'
   | 'name_asc'
   | 'name_desc'
-  | 'rating';
+  | 'rating'
+  | 'popularity';
 
 export interface ProductImage {
   url: string;
@@ -47,13 +49,27 @@ export interface ProductQueryParams {
   page?: number;
   limit?: number;
   category?: string;
+  subcategory?: string;
   brand?: string;
   tag?: string;
+  /** Comma-separated tag list (matches any), e.g. "summer,sale". */
+  tags?: string;
   search?: string;
   minPrice?: number;
   maxPrice?: number;
+  rating?: number;
+  inStock?: boolean;
+  minDiscount?: number;
   status?: ProductStatus;
   sort?: ProductSort;
+}
+
+export interface ProductSuggestion {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  price: number;
 }
 
 export interface ProductFormValues {

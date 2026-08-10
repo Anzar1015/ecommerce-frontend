@@ -36,7 +36,7 @@ export function Navbar() {
 
   const handleSearch = (query: string) => {
     if (!query) return;
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+    navigate(`/search?search=${encodeURIComponent(query)}`);
   };
 
   useEffect(() => {

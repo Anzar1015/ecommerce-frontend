@@ -2,7 +2,12 @@ import { api } from './api';
 import { buildFormData } from '@/utils/buildFormData';
 import type { ApiSuccessResponse } from '@/types/auth.types';
 import type { PaginationMeta } from '@/types/common.types';
-import type { Product, ProductFormValues, ProductQueryParams } from '@/types/product.types';
+import type {
+  Product,
+  ProductFormValues,
+  ProductQueryParams,
+  ProductSuggestion,
+} from '@/types/product.types';
 
 interface ProductListResult {
   products: Product[];
@@ -13,6 +18,14 @@ export const productApi = {
   async list(params: ProductQueryParams): Promise<ProductListResult> {
     const { data } = await api.get<ApiSuccessResponse<ProductListResult>>('/products', { params });
     return data.data;
+  },
+
+  async suggest(q: string, limit = 8): Promise<ProductSuggestion[]> {
+    const { data } = await api.get<ApiSuccessResponse<{ suggestions: ProductSuggestion[] }>>(
+      '/products/suggestions',
+      { params: { q, limit } }
+    );
+    return data.data.suggestions;
   },
 
   async getByIdentifier(identifier: string): Promise<Product> {

@@ -1,7 +1,8 @@
-export const CURRENCY = 'USD';
+export const CURRENCY = 'INR';
 export const DEFAULT_PAGE_SIZE = 12;
 
 export const PRODUCT_SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'relevance', label: 'Relevance' },
   { value: 'newest', label: 'Newest' },
   { value: 'oldest', label: 'Oldest' },
   { value: 'price_asc', label: 'Price: Low to High' },
@@ -9,7 +10,10 @@ export const PRODUCT_SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'name_asc', label: 'Name: A to Z' },
   { value: 'name_desc', label: 'Name: Z to A' },
   { value: 'rating', label: 'Top Rated' },
+  { value: 'popularity', label: 'Popularity' },
 ];
+
+export const RATING_FILTER_OPTIONS = [4, 3, 2, 1] as const;
 
 export const PRODUCT_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'draft', label: 'Draft' },
