@@ -9,6 +9,7 @@ import { PriceTag } from '@/components/ui/PriceTag';
 import { Badge } from '@/components/ui/Badge';
 import { AddToCartButton } from '@/components/features/cart/AddToCartButton';
 import { WishlistButton } from '@/components/features/wishlist/WishlistButton';
+import { ReviewsSection } from '@/components/features/reviews/ReviewsSection';
 import { useProduct } from '@/hooks/useProduct';
 import { cn } from '@/utils/cn';
 
@@ -141,6 +142,8 @@ export default function ProductDetails() {
           <AddToCartButton product={product} quantity={quantity} className="mt-2 w-full sm:w-auto" />
         </div>
       </div>
+
+      <ReviewsSection productId={product.id} />
     </div>
   );
 }

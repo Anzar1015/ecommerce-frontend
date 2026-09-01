@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { SearchBar } from '@/components/common/SearchBar';
 import { CartDrawer } from '@/components/features/cart/CartDrawer';
+import { NotificationBell } from '@/components/features/notifications/NotificationBell';
 import { cn } from '@/utils/cn';
 
 const navLinks = [
@@ -90,6 +91,8 @@ export function Navbar() {
               <Heart className="h-5 w-5" aria-hidden="true" />
             </Link>
           )}
+
+          {isAuthenticated && <NotificationBell />}
 
           <button
             type="button"
@@ -185,11 +188,20 @@ export function Navbar() {
           )}
         </div>
 
+        {isAuthenticated && (
+          <div className="ml-auto md:hidden">
+            <NotificationBell />
+          </div>
+        )}
+
         <button
           type="button"
           onClick={() => setIsCartOpen(true)}
           aria-label="Open cart"
-          className="relative ml-auto inline-flex h-10 w-10 items-center justify-center rounded-lg text-text-primary md:hidden"
+          className={cn(
+            'relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-text-primary md:hidden',
+            !isAuthenticated && 'ml-auto'
+          )}
         >
           <ShoppingCart className="h-5 w-5" aria-hidden="true" />
           {summary.totalQuantity > 0 && (
