@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { CreditCard, Tag, Truck, Wallet, X, Zap } from 'lucide-react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -16,11 +17,12 @@ import { useCreateAddress } from '@/hooks/useAddressMutations';
 import { useCheckout } from '@/hooks/useOrderMutations';
 import { useValidateCoupon } from '@/hooks/useValidateCoupon';
 import { useShippingMethods } from '@/hooks/useShippingMethods';
+import { useRazorpayCheckout } from '@/hooks/useRazorpayCheckout';
 import { formatCurrency } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { AddressFormSchemaValues } from '@/utils/addressValidation';
 import type { ValidateCouponResult } from '@/types/coupon.types';
-import type { ShippingMethod } from '@/types/order.types';
+import type { PaymentMethod, ShippingMethod } from '@/types/order.types';
 
 const SHIPPING_METHOD_ICONS: Record<ShippingMethod, typeof Truck> = { standard: Truck, express: Zap };
 
@@ -32,12 +34,18 @@ export default function Checkout() {
   const checkout = useCheckout();
   const validateCoupon = useValidateCoupon();
   const { data: shippingMethods } = useShippingMethods(summary.subtotal);
+  const { openCheckout, isVerifying } = useRazorpayCheckout();
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<ValidateCouponResult | null>(null);
   const [shippingMethod, setShippingMethod] = useState<ShippingMethod>('standard');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
+  // Separate from checkout.isPending: stays true through the Razorpay modal +
+  // verification, so a customer can't trigger a second checkout while the
+  // first one's payment is still in flight (order already exists by then).
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (!addresses || addresses.length === 0) return;
@@ -61,10 +69,36 @@ export default function Checkout() {
   };
 
   const handlePlaceOrder = () => {
-    if (!selectedAddressId) return;
+    if (!selectedAddressId || isProcessing) return;
+    setIsProcessing(true);
+
     checkout.mutate(
-      { addressId: selectedAddressId, paymentMethod: 'cod', couponCode: appliedCoupon?.code, shippingMethod },
-      { onSuccess: (order) => navigate(`/orders/${order.id}`, { replace: true }) }
+      { addressId: selectedAddressId, paymentMethod, couponCode: appliedCoupon?.code, shippingMethod },
+      {
+        onSuccess: (order) => {
+          // COD (or any provider that settled immediately) — nothing more to do.
+          if (order.payment.method !== 'razorpay' || order.payment.status !== 'pending') {
+            navigate(`/orders/${order.id}`, { replace: true });
+            return;
+          }
+
+          // Razorpay: the order already exists with stock reserved — open the
+          // modal to collect payment. Whatever happens next (paid, dismissed,
+          // failed), the customer lands on the order page, where a stuck
+          // "pending" payment can always be retried.
+          openCheckout(order, {
+            onVerified: () => navigate(`/orders/${order.id}`, { replace: true }),
+            onDismiss: () => {
+              toast('Payment was not completed. You can retry anytime from your order.', { icon: 'ℹ️' });
+              navigate(`/orders/${order.id}`, { replace: true });
+            },
+          });
+        },
+        // Every success path above navigates away (unmounting this page), so
+        // `isProcessing` only needs resetting when checkout itself fails —
+        // otherwise a stock/coupon error would leave the button stuck disabled.
+        onError: () => setIsProcessing(false),
+      }
     );
   };
 
@@ -173,20 +207,45 @@ export default function Checkout() {
           <section>
             <h2 className="text-base font-semibold text-text-primary">Payment method</h2>
             <div className="mt-3 flex flex-col gap-3">
-              <div className="flex items-center gap-3 rounded-xl border border-brand-primary bg-brand-accent/40 p-4">
-                <Wallet className="h-5 w-5 text-brand-primary" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('cod')}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border p-4 text-left transition-colors',
+                  paymentMethod === 'cod'
+                    ? 'border-brand-primary bg-brand-accent/40'
+                    : 'border-surface-border hover:bg-surface-card'
+                )}
+              >
+                <Wallet
+                  className={cn('h-5 w-5', paymentMethod === 'cod' ? 'text-brand-primary' : 'text-text-muted')}
+                  aria-hidden="true"
+                />
                 <div>
                   <p className="text-sm font-medium text-text-primary">Cash on Delivery</p>
                   <p className="text-xs text-text-secondary">Pay when your order arrives.</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-surface-border p-4 opacity-60">
-                <CreditCard className="h-5 w-5 text-text-muted" aria-hidden="true" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('razorpay')}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border p-4 text-left transition-colors',
+                  paymentMethod === 'razorpay'
+                    ? 'border-brand-primary bg-brand-accent/40'
+                    : 'border-surface-border hover:bg-surface-card'
+                )}
+              >
+                <CreditCard
+                  className={cn('h-5 w-5', paymentMethod === 'razorpay' ? 'text-brand-primary' : 'text-text-muted')}
+                  aria-hidden="true"
+                />
                 <div>
-                  <p className="text-sm font-medium text-text-primary">Credit / Debit Card &middot; Razorpay</p>
-                  <p className="text-xs text-text-secondary">Coming soon.</p>
+                  <p className="text-sm font-medium text-text-primary">Card / UPI / Netbanking</p>
+                  <p className="text-xs text-text-secondary">Pay securely via Razorpay.</p>
                 </div>
-              </div>
+              </button>
             </div>
           </section>
         </div>
@@ -257,12 +316,12 @@ export default function Checkout() {
 
           <Button
             onClick={handlePlaceOrder}
-            disabled={!selectedAddressId}
-            isLoading={checkout.isPending}
+            disabled={!selectedAddressId || isProcessing}
+            isLoading={checkout.isPending || isVerifying}
             className="w-full"
           >
             <Truck className="h-4 w-4" aria-hidden="true" />
-            Place order
+            {paymentMethod === 'razorpay' ? 'Proceed to payment' : 'Place order'}
           </Button>
         </div>
       </div>

@@ -12,15 +12,28 @@ import { OrderItemsList } from '@/components/features/orders/OrderItemsList';
 import { OrderTotals } from '@/components/features/orders/OrderTotals';
 import { useMyOrderDetails } from '@/hooks/useOrders';
 import { useCancelOrder } from '@/hooks/useOrderMutations';
+import { useRetryPayment } from '@/hooks/usePaymentMutations';
+import { useRazorpayCheckout } from '@/hooks/useRazorpayCheckout';
 import { PAYMENT_METHOD_LABELS, SHIPPING_METHOD_LABELS } from '@/constants';
+import { formatCurrency } from '@/utils/format';
 import type { OrderStatus } from '@/types/order.types';
 
 const CANCELLABLE_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'packed', 'shipped', 'out_for_delivery'];
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'Payment pending',
+  paid: 'Paid',
+  failed: 'Payment failed',
+  refunded: 'Refunded',
+  partially_refunded: 'Partially refunded',
+};
 
 export default function OrderDetails() {
   const { id } = useParams<{ id: string }>();
   const { data: order, isLoading, isError, refetch } = useMyOrderDetails(id);
   const cancelOrder = useCancelOrder();
+  const retryPayment = useRetryPayment();
+  const { openCheckout, isVerifying } = useRazorpayCheckout();
   const [isCancelOpen, setIsCancelOpen] = useState(false);
 
   if (isLoading) {
@@ -40,10 +53,25 @@ export default function OrderDetails() {
   }
 
   const canCancel = CANCELLABLE_STATUSES.includes(order.status);
+  const canRetryPayment =
+    order.payment.method === 'razorpay' &&
+    order.status !== 'cancelled' &&
+    (order.payment.status === 'pending' || order.payment.status === 'failed');
 
   const handleCancel = async () => {
     await cancelOrder.mutateAsync({ id: order.id });
     setIsCancelOpen(false);
+  };
+
+  const handleRetryPayment = () => {
+    retryPayment.mutate(order.id, {
+      onSuccess: (updatedOrder) => {
+        openCheckout(updatedOrder, {
+          onVerified: () => refetch(),
+          onDismiss: () => refetch(),
+        });
+      },
+    });
   };
 
   return (
@@ -63,6 +91,15 @@ export default function OrderDetails() {
             <Printer className="h-4 w-4" aria-hidden="true" />
             Print invoice
           </Button>
+          {canRetryPayment && (
+            <Button
+              size="sm"
+              onClick={handleRetryPayment}
+              isLoading={retryPayment.isPending || isVerifying}
+            >
+              {order.payment.status === 'failed' ? 'Retry payment' : 'Complete payment'}
+            </Button>
+          )}
           {canCancel && (
             <Button variant="outline" size="sm" onClick={() => setIsCancelOpen(true)}>
               Cancel order
@@ -105,8 +142,18 @@ export default function OrderDetails() {
             <h2 className="text-sm font-semibold text-text-primary">Payment</h2>
             <p className="mt-2 text-sm text-text-secondary">
               {PAYMENT_METHOD_LABELS[order.payment.method] ?? order.payment.method} &middot;{' '}
-              {order.payment.status === 'paid' ? 'Paid' : 'Payment pending'}
+              {PAYMENT_STATUS_LABELS[order.payment.status] ?? order.payment.status}
             </p>
+            {order.refunds.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1 border-t border-surface-divider pt-2 text-xs text-text-secondary">
+                {order.refunds.map((refund) => (
+                  <li key={refund.razorpayRefundId} className="flex items-center justify-between">
+                    <span>{new Date(refund.createdAt).toLocaleDateString()}</span>
+                    <span className="font-medium text-text-primary">{formatCurrency(refund.amount)} refunded</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="rounded-xl border border-surface-border bg-white p-4">

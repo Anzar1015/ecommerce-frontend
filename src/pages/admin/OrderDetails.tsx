@@ -13,8 +13,18 @@ import { OrderItemsList } from '@/components/features/orders/OrderItemsList';
 import { OrderTotals } from '@/components/features/orders/OrderTotals';
 import { useAdminOrderDetails } from '@/hooks/useAdminOrders';
 import { useUpdateOrderStatus, useUpdateOrderShipping } from '@/hooks/useAdminOrderMutations';
+import { useRefundPayment } from '@/hooks/usePaymentMutations';
 import { ORDER_STATUS_LABELS, PAYMENT_METHOD_LABELS, SHIPPING_METHOD_LABELS } from '@/constants';
+import { formatCurrency } from '@/utils/format';
 import type { OrderStatus } from '@/types/order.types';
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: 'Payment pending',
+  paid: 'Paid',
+  failed: 'Payment failed',
+  refunded: 'Refunded',
+  partially_refunded: 'Partially refunded',
+};
 
 const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
   'pending',
@@ -41,10 +51,13 @@ export default function AdminOrderDetails() {
   const { data: order, isLoading, isError, refetch } = useAdminOrderDetails(id);
   const updateStatus = useUpdateOrderStatus();
   const updateShipping = useUpdateOrderShipping();
+  const refundPayment = useRefundPayment();
   const [nextStatus, setNextStatus] = useState<OrderStatus | ''>('');
   const [note, setNote] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
   const [courier, setCourier] = useState('');
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundReason, setRefundReason] = useState('');
 
   useEffect(() => {
     if (order) {
@@ -76,6 +89,18 @@ export default function AdminOrderDetails() {
       id: order.id,
       payload: { trackingNumber: trackingNumber.trim() || undefined, courier: courier.trim() || undefined },
     });
+  };
+
+  const refundedAmount = order.refunds.reduce((sum, refund) => sum + refund.amount, 0);
+  const remainingRefundable = Math.round((order.total - refundedAmount) * 100) / 100;
+  const canRefund =
+    (order.payment.status === 'paid' || order.payment.status === 'partially_refunded') && remainingRefundable > 0;
+
+  const handleRefund = async () => {
+    const amount = refundAmount.trim() ? Number(refundAmount) : undefined;
+    await refundPayment.mutateAsync({ orderId: order.id, amount, reason: refundReason.trim() || undefined });
+    setRefundAmount('');
+    setRefundReason('');
   };
 
   return (
@@ -124,9 +149,47 @@ export default function AdminOrderDetails() {
             <h2 className="text-sm font-semibold text-text-primary">Payment</h2>
             <p className="mt-2 text-sm text-text-secondary">
               {PAYMENT_METHOD_LABELS[order.payment.method] ?? order.payment.method} &middot;{' '}
-              {order.payment.status === 'paid' ? 'Paid' : 'Payment pending'}
+              {PAYMENT_STATUS_LABELS[order.payment.status] ?? order.payment.status}
             </p>
+            {order.refunds.length > 0 && (
+              <ul className="mt-2 flex flex-col gap-1 border-t border-surface-divider pt-2 text-xs text-text-secondary">
+                {order.refunds.map((refund) => (
+                  <li key={refund.razorpayRefundId} className="flex items-center justify-between">
+                    <span>
+                      {new Date(refund.createdAt).toLocaleDateString()}
+                      {refund.reason ? ` — ${refund.reason}` : ''}
+                    </span>
+                    <span className="font-medium text-text-primary">{formatCurrency(refund.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
+          {canRefund && (
+            <div className="flex flex-col gap-3 rounded-xl border border-surface-border bg-white p-4">
+              <h2 className="text-sm font-semibold text-text-primary">Issue refund</h2>
+              <Input
+                label={`Amount (₹, optional — up to ${formatCurrency(remainingRefundable)})`}
+                type="number"
+                min={0}
+                max={remainingRefundable}
+                step="0.01"
+                placeholder={`Full refund of ${formatCurrency(remainingRefundable)}`}
+                value={refundAmount}
+                onChange={(event) => setRefundAmount(event.target.value)}
+              />
+              <Textarea
+                label="Reason (optional)"
+                rows={2}
+                value={refundReason}
+                onChange={(event) => setRefundReason(event.target.value)}
+              />
+              <Button variant="danger" size="sm" onClick={handleRefund} isLoading={refundPayment.isPending}>
+                Issue refund
+              </Button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 rounded-xl border border-surface-border bg-white p-4">
             <h2 className="text-sm font-semibold text-text-primary">Shipping</h2>

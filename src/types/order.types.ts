@@ -6,9 +6,8 @@ export type OrderStatus =
   | 'out_for_delivery'
   | 'delivered'
   | 'cancelled';
-// 'stripe' | 'razorpay' are reserved for when those providers go live on the backend.
 export type PaymentMethod = 'cod' | 'stripe' | 'razorpay';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
 export type ShippingMethod = 'standard' | 'express';
 
 export interface OrderItem {
@@ -43,6 +42,15 @@ export interface OrderPayment {
   status: PaymentStatus;
   paidAt?: string;
   providerReference?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+}
+
+export interface OrderRefund {
+  amount: number;
+  razorpayRefundId: string;
+  reason?: string;
+  createdAt: string;
 }
 
 export interface OrderCoupon {
@@ -74,6 +82,7 @@ export interface Order {
   shippingFee: number;
   total: number;
   coupon?: OrderCoupon;
+  refunds: OrderRefund[];
   cancelledAt?: string;
   cancelReason?: string;
   createdAt: string;

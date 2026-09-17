@@ -38,6 +38,11 @@ export const orderApi = {
     return data.data.order;
   },
 
+  async retryPayment(id: string): Promise<Order> {
+    const { data } = await api.post<ApiSuccessResponse<{ order: Order }>>(`/orders/${id}/retry-payment`);
+    return data.data.order;
+  },
+
   async adminList(params: AdminOrderQueryParams): Promise<OrderListResult> {
     const { data } = await api.get<ApiSuccessResponse<OrderListResult>>('/orders/admin/all', { params });
     return data.data;
