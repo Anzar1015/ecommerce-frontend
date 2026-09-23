@@ -11,7 +11,7 @@ export function Footer() {
           <div>
             <Link to="/" className="flex items-center gap-2 text-brand-primary">
               <ShoppingBag className="h-6 w-6" aria-hidden="true" />
-              <span className="text-lg font-semibold">YourStore</span>
+              <span className="text-lg font-semibold">Cartify</span>
             </Link>
             <p className="mt-2 max-w-xs text-sm text-text-secondary">
               Premium products, honest prices, and a shopping experience built to last.
@@ -36,7 +36,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-surface-divider pt-6 text-sm text-text-muted">
-          &copy; {year} YourStore. All rights reserved.
+          &copy; {year} Cartify. All rights reserved.
         </div>
       </div>
     </footer>

@@ -34,7 +34,7 @@ export function useRazorpayCheckout() {
         key: config.razorpayKeyId,
         amount: Math.round(order.total * 100),
         currency: 'INR',
-        name: 'YourStore',
+        name: 'Cartify',
         description: `Order ${order.orderNumber}`,
         order_id: order.payment.razorpayOrderId,
         theme: { color: '#2563EB' },

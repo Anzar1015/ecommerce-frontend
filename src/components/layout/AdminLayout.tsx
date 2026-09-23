@@ -13,7 +13,7 @@ export function AdminLayout() {
         <header className="flex h-16 items-center justify-between border-b border-surface-border bg-white px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2 text-brand-primary">
             <ShoppingBag className="h-5 w-5" aria-hidden="true" />
-            <span className="text-base font-semibold">YourStore Admin</span>
+            <span className="text-base font-semibold">Cartify Admin</span>
           </Link>
 
           <div className="flex items-center gap-4">

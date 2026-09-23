@@ -20,7 +20,7 @@ export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
       >
         <Link to="/" className="mb-6 flex items-center gap-2 text-brand-primary">
           <ShoppingBag className="h-6 w-6" aria-hidden="true" />
-          <span className="text-lg font-semibold">YourStore</span>
+          <span className="text-lg font-semibold">Cartify</span>
         </Link>
 
         <h1 className="text-2xl font-semibold text-text-primary">{title}</h1>
