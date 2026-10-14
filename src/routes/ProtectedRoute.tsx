@@ -15,10 +15,10 @@ interface ProtectedRouteProps {
  * definitively whether the user is authenticated.
  */
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, status } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
-  if (isLoading && status === 'idle') {
+  if (isLoading) {
     return <FullScreenLoader />;
   }
 
